@@ -1,18 +1,23 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   Bot, X, Send, Brain, Zap, CheckCircle,
   Users, Radio, ShieldAlert, Siren, MessageCircle,
+  Mic, MicOff, Volume2, VolumeX, Square, Activity, Sparkles,
+  Droplets, ArrowRight, AlertTriangle, Wind,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { chatWithAIReasoning } from "../../services/llmIntegration";
+import { voiceCommandService } from "../../services/voiceCommandService";
 import {
   buildGroupRecallLinks,
   buildWhatsAppUrl,
   buildRecallMessage,
   buildDeployMessage,
-  openWhatsApp,
 } from "../../services/whatsappService";
 import { sendCommanderAlert, sendCitizenAlert } from "../../services/notificationService";
+import { getLiveDams } from "../../services/dashboardKnowledgeService";
+import { monitoredAreas } from "../../data/mockData";
 
 // ── Intent Detection ──────────────────────────────────────────────────────────
 function detectIntent(message, { teams, disasters, sosBeacons, hospitals }) {
@@ -137,8 +142,7 @@ function executeIntent(intent, actions, allTeams) {
       logAiAction('Mission Control System', `Complete Mission for Team ${intent.teamId}`, `AI closed active mission loop upon commander request`);
       return { actionLabel: intent.label, waLinks: [] };
     case "draft_citizen_alert":
-      // Prompt says: "the msg should always be sent to the controller" and "ask the controller before it send to the citizen"
-      sendCommanderAlert(intent.disaster); // auto-send to commander immediately
+      sendCommanderAlert(intent.disaster);
       return { 
         actionLabel: "Commander Alert Sent. Approval required for Citizen Broadcast.", 
         waLinks: [], 
@@ -159,15 +163,20 @@ export default function ResQCopilot() {
   } = useApp();
 
   const stats = getStats();
-  const [isOpen, setIsOpen]           = useState(false);
-  const [inputQuery, setInputQuery]   = useState("");
-  const [isTyping, setIsTyping]       = useState(false);
-  const [isReasoning, setIsReasoning] = useState(false);
+  const [isOpen, setIsOpen]                   = useState(false);
+  const [inputQuery, setInputQuery]           = useState("");
+  const [isTyping, setIsTyping]               = useState(false);
+  const [isReasoning, setIsReasoning]         = useState(false);
+  const [isListeningVoice, setIsListeningVoice] = useState(false);
+  const [isSpeakingVoice, setIsSpeakingVoice] = useState(false);
+  const [isVoiceOutputEnabled, setIsVoiceOutputEnabled] = useState(true);
+  const [interimVoiceTranscript, setInterimVoiceTranscript] = useState("");
+  const [activeSpeakingMsgId, setActiveSpeakingMsgId] = useState(null);
   const messagesEndRef = useRef(null);
 
   const [messages, setMessages] = useState([{
     id: 1, sender: "ai", source: "ai",
-    text: "Hello, Commander. I am ResQ Copilot — GPT-OSS 120B reasoning with FULL PANEL CONTROL + WhatsApp dispatch.\n\nI can execute real actions AND send WhatsApp messages to team leaders:\n• \"Recall Alpha Squad\" → recalls team + sends WhatsApp\n• \"Deploy nearest team to Flood Zone\" → deploys + sends WhatsApp\n• \"Resolve pending SOS\"\n• \"Clear the flood disaster\"\n\nJust give the order!",
+    text: "Hello, Commander. I am ResQ Copilot — Voice-Enabled AI Tactical Commander.\n\n🎙️ Voice Assistant Active:\n• Speak to me by pressing the microphone below.\n• I detect your voice, process real actions, and reply in TEXT as well as VOICE.\n\nTry speaking:\n• \"What is the current disaster situation?\"\n• \"Deploy nearest team to Flood Zone\"\n• \"Recall all deployed rescue teams\"\n• \"Check available hospital beds\"\n\nGive the order by voice or text!",
     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   }]);
 
@@ -175,11 +184,91 @@ export default function ResQCopilot() {
     if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
 
-  const handleSend = async (textToSend) => {
+  // Subscribe to voiceCommandService events
+  useEffect(() => {
+    const unsub = voiceCommandService.subscribe((event) => {
+      if (event.type === 'start') {
+        setIsListeningVoice(true);
+        setInterimVoiceTranscript("");
+      } else if (event.type === 'end') {
+        setIsListeningVoice(false);
+      } else if (event.type === 'speaking_start') {
+        setIsSpeakingVoice(true);
+      } else if (event.type === 'speaking_end') {
+        setIsSpeakingVoice(false);
+        setActiveSpeakingMsgId(null);
+      } else if (event.type === 'result') {
+        setInterimVoiceTranscript(event.full || event.interim || event.final || "");
+      } else if (event.type === 'speech_finalized') {
+        const textToProcess = event.text;
+        setInterimVoiceTranscript("");
+        setInputQuery("");
+        if (textToProcess && textToProcess.trim().length > 1) {
+          handleSend(textToProcess.trim(), true);
+        }
+      }
+    });
+
+    // Global custom event listeners to open voice assistant anywhere
+    const handleOpenCopilot = () => {
+      setIsOpen(true);
+      voiceCommandService.startListening();
+    };
+    window.addEventListener('resqai_open_voice_assistant', handleOpenCopilot);
+    window.addEventListener('resqai_toggle_voice_assistant', handleOpenCopilot);
+
+    return () => {
+      unsub();
+      window.removeEventListener('resqai_open_voice_assistant', handleOpenCopilot);
+      window.removeEventListener('resqai_toggle_voice_assistant', handleOpenCopilot);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams, disasters, sosBeacons, hospitals, isVoiceOutputEnabled]);
+
+  const toggleVoice = () => {
+    if (isListeningVoice) {
+      voiceCommandService.stopListening();
+    } else {
+      if (isSpeakingVoice) {
+        voiceCommandService.stopSpeaking();
+      }
+      setInterimVoiceTranscript("");
+      voiceCommandService.startListening();
+    }
+  };
+
+  const handleSpeakMessage = (text, msgId) => {
+    if (activeSpeakingMsgId === msgId && isSpeakingVoice) {
+      voiceCommandService.stopSpeaking();
+      setActiveSpeakingMsgId(null);
+    } else {
+      voiceCommandService.stopSpeaking();
+      setActiveSpeakingMsgId(msgId);
+      const speechText = voiceCommandService.cleanTextForSpeech(text);
+      voiceCommandService.speakText(speechText, () => {
+        setActiveSpeakingMsgId(null);
+      });
+    }
+  };
+
+  const handleSend = async (textToSend, isFromVoice = false) => {
     const text = (textToSend || inputQuery).trim();
     if (!text) return;
-    setMessages((p) => [...p, { id: Date.now(), sender: "user", text, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+
+    if (isListeningVoice) {
+      voiceCommandService.stopListening();
+    }
+
+    setMessages((p) => [...p, {
+      id: Date.now(),
+      sender: "user",
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isVoiceInput: isFromVoice,
+    }]);
+
     setInputQuery("");
+    setInterimVoiceTranscript("");
     setIsTyping(true);
     setIsReasoning(true);
 
@@ -198,16 +287,68 @@ export default function ResQCopilot() {
       targetDisaster = result.disaster;
     }
 
-    // 2. Get AI reply
+    // 2. Get AI reply & speak aloud
     try {
-      const reply = await chatWithAIReasoning(text, { disasters, teams, hospitals, sosBeacons, stats, completedMissions });
-      const msgs = [{ id: Date.now() + 1, sender: "ai", text: reply, source: "reasoning", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }];
-      if (actionLabel) msgs.push({ id: Date.now() + 2, sender: "action", intent, label: actionLabel, waLinks, requireApproval, targetDisaster, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+      const dams = getLiveDams();
+      const reply = await chatWithAIReasoning(text, {
+        disasters,
+        teams,
+        hospitals,
+        sosBeacons,
+        stats,
+        completedMissions,
+        dams,
+        monitoredAreas,
+      });
+
+      const replyText = typeof reply === 'object' && reply ? reply.text : reply;
+      const spokenSummary = typeof reply === 'object' && reply ? reply.spokenSummary : replyText;
+      const damData = typeof reply === 'object' && reply ? reply.damData : null;
+      const weatherData = typeof reply === 'object' && reply ? reply.weatherData : null;
+      const disasterData = typeof reply === 'object' && reply ? reply.disasterData : null;
+
+      const aiMsgId = Date.now() + 1;
+      const msgs = [{
+        id: aiMsgId,
+        sender: "ai",
+        text: replyText,
+        source: "reasoning",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        damData,
+        weatherData,
+        disasterData,
+      }];
+      if (actionLabel) {
+        msgs.push({ id: Date.now() + 2, sender: "action", intent, label: actionLabel, waLinks, requireApproval, targetDisaster, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+      }
       setMessages((p) => [...p, ...msgs]);
+
+      // ── Speak Solution in Voice ────────────────────────────────────────────
+      if (isVoiceOutputEnabled || isFromVoice) {
+        const cleanSpoken = voiceCommandService.cleanTextForSpeech(spokenSummary || replyText);
+        let spokenLead = "";
+        if (actionLabel) {
+          spokenLead = `Command executed: ${actionLabel}. `;
+        }
+        
+        // Deliver complete spoken summary naturally
+        const finalSpokenText = spokenLead + cleanSpoken;
+
+        setActiveSpeakingMsgId(aiMsgId);
+        voiceCommandService.speakText(finalSpokenText, () => {
+          setActiveSpeakingMsgId(null);
+        });
+      }
     } catch (err) {
       const msgs = [{ id: Date.now() + 1, sender: "ai", text: "⚠️ " + (err.message || "AI temporarily unavailable."), source: "error", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }];
-      if (actionLabel) msgs.push({ id: Date.now() + 2, sender: "action", intent, label: actionLabel, waLinks, requireApproval, targetDisaster, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+      if (actionLabel) {
+        msgs.push({ id: Date.now() + 2, sender: "action", intent, label: actionLabel, waLinks, requireApproval, targetDisaster, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+      }
       setMessages((p) => [...p, ...msgs]);
+
+      if (isVoiceOutputEnabled || isFromVoice) {
+        voiceCommandService.speakText("Notice: AI service encountered an error. Please verify telemetry connection.");
+      }
     } finally {
       setIsTyping(false);
       setIsReasoning(false);
@@ -217,9 +358,21 @@ export default function ResQCopilot() {
   const handleApproveCitizenAlert = async (msgId, disaster) => {
     sendCitizenAlert(disaster);
     setMessages((prev) => prev.map(m => m.id === msgId ? { ...m, label: "Citizen Alert Broadcasted Successfully ✓", requireApproval: false } : m));
+    if (isVoiceOutputEnabled) {
+      voiceCommandService.speakText(`Citizen emergency broadcast approved and transmitted for ${disaster.areaName}.`);
+    }
   };
 
-  const quickPrompts = ["Recall all deployed teams", "Deploy nearest team", "Alert citizens about flood", "Resolve pending SOS", "Dispatch ambulance", "Generate situation report"];
+  const quickPrompts = [
+    "What is the water level of Mettur dam?",
+    "What is the weather in Chennai?",
+    "Disaster details for Velachery",
+    "Are any dams in the danger zone?",
+    "How many ambulances and hospital beds are available?",
+    "What is the current disaster situation?",
+    "Recall all deployed teams",
+    "Deploy nearest team",
+  ];
 
   const intentIcon = {
     deploy_team:        <Users       className="h-3.5 w-3.5" />,
@@ -233,48 +386,119 @@ export default function ResQCopilot() {
 
   return (
     <>
-      {/* Launcher */}
-      <button onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-2xl hover:shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 border border-white/20"
-        title="Open ResQ AI Copilot">
-        <span className="relative flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
-        </span>
-        <Bot className="h-5 w-5" />
-        <span className="text-sm tracking-wide">ResQ Copilot</span>
-      </button>
+      {/* Floating Launcher Button — bottom-right */}
+      {!isOpen && (
+        <div data-copilot-launcher style={{
+          position: 'fixed',
+          bottom: '28px',
+          right: '28px',
+          zIndex: 99999,
+        }}>
+          <button onClick={() => setIsOpen(true)}
+            title="Open ResQ AI Copilot (Voice & Text)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '14px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #2563eb, #4f46e5, #7c3aed)',
+              color: '#ffffff',
+              fontWeight: 600,
+              fontSize: '14px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              cursor: 'pointer',
+              boxShadow: '0 8px 32px rgba(79, 70, 229, 0.5)',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(79, 70, 229, 0.6)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(79, 70, 229, 0.5)'; }}
+          >
+            <span style={{ position: 'relative', display: 'flex', height: '12px', width: '12px' }}>
+              <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '9999px', backgroundColor: '#34d399', opacity: 0.75, animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+              <span style={{ position: 'relative', display: 'inline-flex', height: '12px', width: '12px', borderRadius: '9999px', backgroundColor: '#34d399' }} />
+            </span>
+            <Bot className="h-5 w-5" style={{ color: '#ffffff' }} />
+            <span style={{ color: '#ffffff' }}>ResQ Voice Copilot</span>
+            <Mic className="h-4 w-4 text-cyan-300 ml-1 animate-pulse" />
+          </button>
+        </div>
+      )}
 
-      {/* Drawer */}
+      {/* Chat Drawer */}
       {isOpen && (
-        <div className="fixed bottom-20 right-6 z-50 w-[95vw] sm:w-[440px] h-[600px] rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+        <div data-copilot-drawer style={{
+          position: 'fixed',
+          bottom: '28px',
+          right: '28px',
+          zIndex: 99999,
+          width: '450px',
+          maxWidth: '95vw',
+          height: '620px',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 12px 48px rgba(0, 0, 0, 0.5)',
+        }}
+        className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 flex flex-col animate-slide-up">
 
           {/* Header */}
-          <div className="px-4 py-3.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between">
+          <div className="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-md shadow-blue-500/30">
                 <Brain className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  ResQ Emergency Copilot
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono">Active</span>
+                  ResQ Tactical Copilot
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-0.5">
+                    <Mic className="h-2.5 w-2.5 text-cyan-400" /> Voice AI
+                  </span>
                   <span className="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-0.5">
                     <Zap className="h-2.5 w-2.5" /> Control
-                  </span>
-                  <span className="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-0.5">
-                    <MessageCircle className="h-2.5 w-2.5" /> WA
                   </span>
                 </h3>
                 <p className="text-[10px] text-slate-400 flex items-center gap-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-                  GPT-OSS 120B · Panel Control · WhatsApp Dispatch
+                  Voice Detection · Speech Synthesis · Full Panel Control
                 </p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-              <X className="h-5 w-5" />
-            </button>
+
+            {/* Header Audio Controls */}
+            <div className="flex items-center gap-1.5">
+              {/* Spoken Voice Mute Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isVoiceOutputEnabled;
+                  setIsVoiceOutputEnabled(next);
+                  if (!next && isSpeakingVoice) {
+                    voiceCommandService.stopSpeaking();
+                  }
+                }}
+                className={`p-1.5 rounded-lg border transition-all flex items-center gap-1 text-[11px] font-semibold ${
+                  isVoiceOutputEnabled
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/30'
+                    : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                }`}
+                title={isVoiceOutputEnabled ? 'Voice Responses: Enabled (Click to Mute Audio)' : 'Voice Responses: Muted (Click to Enable Spoken Audio)'}
+              >
+                {isVoiceOutputEnabled ? <Volume2 className="h-3.5 w-3.5 text-cyan-400" /> : <VolumeX className="h-3.5 w-3.5" />}
+                <span className="text-[9px] uppercase hidden sm:inline">{isVoiceOutputEnabled ? 'Voice ON' : 'Muted'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  voiceCommandService.stopSpeaking();
+                  voiceCommandService.stopListening();
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                title="Close Assistant"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Metrics bar */}
@@ -354,13 +578,165 @@ export default function ResQCopilot() {
                       <Bot className="h-4 w-4" />
                     </div>
                   )}
-                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
-                    msg.sender === "user" ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none"
-                    : msg.source === "error" ? "bg-red-900/30 border border-red-500/30 text-red-300 rounded-tl-none"
-                    : "bg-slate-800/80 border border-slate-700/60 text-slate-200 rounded-tl-none whitespace-pre-line"
+                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed shadow-sm ${
+                    msg.sender === "user"
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none"
+                      : msg.source === "error"
+                      ? "bg-red-900/30 border border-red-500/30 text-red-300 rounded-tl-none"
+                      : "bg-slate-800/80 border border-slate-700/60 text-slate-200 rounded-tl-none whitespace-pre-line"
                   }`}>
+                    {/* User speech badge */}
+                    {msg.isVoiceInput && (
+                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/10 text-[9px] font-mono text-cyan-200 mb-1">
+                        <Mic className="h-2.5 w-2.5" /> Spoken Voice Command
+                      </div>
+                    )}
+
                     <div>{msg.text}</div>
-                    <div className="text-[9px] text-slate-400/80 mt-1 text-right">{msg.timestamp}</div>
+
+                    {/* Interactive Visual Dam Telemetry Card */}
+                    {msg.damData && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-slate-900/90 border border-cyan-500/40 space-y-2 text-xs shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Droplets className="h-4 w-4 text-cyan-400 shrink-0" />
+                            <span className="font-bold text-white text-xs">{msg.damData.name}</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            {((msg.damData.storage / msg.damData.capacity) * 100).toFixed(1)}% Full
+                          </span>
+                        </div>
+
+                        {/* Level Gauge Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] text-slate-300 font-mono">
+                            <span>Level: <strong className="text-cyan-400">{msg.damData.currentLevel} ft</strong></span>
+                            <span className="text-slate-400">FRL: {msg.damData.fullReservoirLevel} ft</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                              style={{ width: `${Math.min(100, (msg.damData.currentLevel / msg.damData.fullReservoirLevel) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Inflow vs Outflow */}
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono pt-0.5">
+                          <div className="p-1.5 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block text-[9px]">Inflow</span>
+                            <span className="text-emerald-400 font-bold">▲ {msg.damData.inflow?.toLocaleString()} cusecs</span>
+                          </div>
+                          <div className="p-1.5 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block text-[9px]">Discharge / Outflow</span>
+                            <span className="text-blue-400 font-bold">▼ {msg.damData.outflow?.toLocaleString()} cusecs</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                          <span className="text-[10px] text-slate-400">
+                            Gates: <strong className="text-white">{msg.damData.spillwayGates?.open || 0} Open</strong> / {msg.damData.spillwayGates?.total || 16}
+                          </span>
+                          <Link
+                            to="/dams"
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition-colors"
+                          >
+                            <span>Reservoir Center</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive Visual Weather Card */}
+                    {msg.weatherData && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-slate-900/90 border border-blue-500/40 space-y-2 text-xs shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{msg.weatherData.conditionIcon || '⛅'}</span>
+                            <div>
+                              <span className="font-bold text-white text-xs block">{msg.weatherData.locationName}</span>
+                              <span className="text-[10px] text-slate-400">{msg.weatherData.condition}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-base font-black text-amber-300 block">{msg.weatherData.temperatureC || `${msg.weatherData.temperature}°C`}</span>
+                            <span className="text-[9px] text-slate-400">Feels like {msg.weatherData.feelsLikeC || `${msg.weatherData.feelsLike}°C`}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1 text-[9px] font-mono pt-1 text-center">
+                          <div className="p-1 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block">Rainfall</span>
+                            <span className="text-cyan-400 font-bold">{msg.weatherData.precipitationMm || '0 mm/h'}</span>
+                          </div>
+                          <div className="p-1 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block">Humidity</span>
+                            <span className="text-slate-200 font-bold">{msg.weatherData.humidityText || `${msg.weatherData.humidity}%`}</span>
+                          </div>
+                          <div className="p-1 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block">Wind</span>
+                            <span className="text-slate-200 font-bold">{msg.weatherData.windSpeedText || `${msg.weatherData.windSpeed} km/h`}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive Visual Disaster Sitrep Card */}
+                    {msg.disasterData && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-slate-900/90 border border-red-500/40 space-y-2 text-xs shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+                            <span className="font-bold text-white text-xs">{msg.disasterData.area?.name || 'Emergency Sector'}</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40">
+                            Risk: {msg.disasterData.disaster?.riskPercent || msg.disasterData.area?.riskPercent || 65}%
+                          </span>
+                        </div>
+
+                        <div className="text-[10px] text-slate-300">
+                          <span className="text-slate-400 block text-[9px]">Evacuation Corridor:</span>
+                          <span className="text-emerald-300 font-medium">{msg.disasterData.area?.evacuationRoute || 'Primary inland corridor'}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5 text-[9px] pt-1">
+                          <div className="p-1 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block">Trauma Hospital</span>
+                            <span className="text-white font-semibold truncate block">{msg.disasterData.hospital?.name}</span>
+                          </div>
+                          <div className="p-1 rounded bg-slate-950/70 border border-slate-800">
+                            <span className="text-slate-400 block">Assigned Unit</span>
+                            <span className="text-white font-semibold truncate block">{msg.disasterData.team?.name || 'NDRF Quick Reaction'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bottom message toolbar */}
+                    <div className="text-[9px] text-slate-400/80 mt-1.5 flex items-center justify-between pt-1 border-t border-slate-700/40">
+                      {msg.sender === "ai" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSpeakMessage(msg.text, msg.id)}
+                          className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+                          title="Listen to Spoken Audio Solution"
+                        >
+                          {activeSpeakingMsgId === msg.id && isSpeakingVoice ? (
+                            <>
+                              <Square className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              <span className="text-amber-400 font-bold">Stop Audio</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="h-3 w-3 text-cyan-400" />
+                              <span>Listen to Voice</span>
+                            </>
+                          )}
+                        </button>
+                      ) : <span />}
+                      <span>{msg.timestamp}</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -383,7 +759,7 @@ export default function ResQCopilot() {
                       <span>Reasoning with GPT-OSS 120B...</span>
                     </div>
                   ) : (
-                    <span className="text-slate-400 text-xs italic">Synthesizing response...</span>
+                    <span className="text-slate-400 text-xs italic">Synthesizing tactical response in text & voice...</span>
                   )}
                 </div>
               </div>
@@ -401,12 +777,126 @@ export default function ResQCopilot() {
             ))}
           </div>
 
-          {/* Input */}
+          {/* ── LIVE VOICE DETECTION RADAR & AUDIO WAVEFORM ──────────────────── */}
+          {isListeningVoice && (
+            <div className="px-4 py-2.5 bg-gradient-to-r from-red-950/90 via-slate-900 to-purple-950/90 border-t border-red-500/40 flex flex-col gap-2 animate-fadeIn">
+              <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-2 text-red-400 font-bold">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <span>Voice Model Detecting Speech...</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {interimVoiceTranscript && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = interimVoiceTranscript;
+                        voiceCommandService.stopListening();
+                        setInterimVoiceTranscript("");
+                        handleSend(text, true);
+                      }}
+                      className="text-[10px] text-white px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 font-bold transition-all shadow-sm"
+                    >
+                      Send Voice Now ✓
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      voiceCommandService.stopListening();
+                      setInterimVoiceTranscript("");
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              {/* Animated Equalizer Waveform */}
+              <div className="flex items-end justify-center gap-1 h-6 w-full py-0.5">
+                {[12, 22, 16, 26, 18, 28, 14, 24, 18, 26, 12, 20, 28, 14, 22].map((h, i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 rounded-full bg-gradient-to-t from-red-500 via-purple-500 to-cyan-400 animate-pulse"
+                    style={{
+                      height: `${Math.max(6, Math.floor((Math.sin(i * 0.8) + 1.2) * (h * 0.45)))}px`,
+                      animationDelay: `${i * 60}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="text-xs text-white font-mono bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 truncate">
+                {interimVoiceTranscript ? (
+                  <span className="text-cyan-300 italic font-semibold">“{interimVoiceTranscript}”</span>
+                ) : (
+                  <span className="text-slate-500 italic">Listening to your voice... Speak your disaster command clearly.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── SPOKEN AUDIO SYNTHESIS STATUS ─────────────────────────────────── */}
+          {isSpeakingVoice && !isListeningVoice && (
+            <div className="px-4 py-2 bg-cyan-950/80 border-t border-cyan-500/40 flex items-center justify-between text-xs text-cyan-300 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-cyan-400 animate-bounce" />
+                <span className="font-medium">AI Copilot Speaking Solution...</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => voiceCommandService.stopSpeaking()}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-[10px] transition-colors border border-slate-700"
+              >
+                <Square className="h-2.5 w-2.5 fill-amber-300" /> Stop Speaking
+              </button>
+            </div>
+          )}
+
+          {/* Input Form */}
           <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
-            <input type="text" value={inputQuery} onChange={(e) => setInputQuery(e.target.value)}
-              placeholder='Try: "Recall Alpha Squad" or "Deploy team to flood zone"'
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-            <button type="submit" disabled={!inputQuery.trim()} className="p-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl transition-colors shrink-0">
+            <input
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              placeholder={isListeningVoice ? 'Listening to your voice...' : 'Speak with mic or type: "Deploy team to flood zone"...'}
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            
+            {/* Microphone Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleVoice}
+              className={`p-2.5 rounded-xl transition-all shrink-0 relative ${
+                isListeningVoice
+                  ? 'bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50 ring-4 ring-red-500/30'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white'
+              }`}
+              title={isListeningVoice ? 'Listening... Click to stop' : 'Click to Speak via Voice Assistant'}
+            >
+              {isListeningVoice ? (
+                <>
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                  </span>
+                  <MicOff className="h-4 w-4" />
+                </>
+              ) : (
+                <Mic className="h-4 w-4 text-cyan-400" />
+              )}
+            </button>
+
+            <button
+              type="submit"
+              disabled={!inputQuery.trim()}
+              className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl transition-colors shrink-0"
+              title="Send Command"
+            >
               <Send className="h-4 w-4" />
             </button>
           </form>

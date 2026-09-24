@@ -23,6 +23,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { searchLocations, analyzeLocationRisk } from '../services/locationService';
 import { fetchRealtimeWeather } from '../services/weatherService';
+import { fetchRainViewerRadarInfo, fetchLiveSeismicTelemetry } from '../services/realtimeTelemetryService';
 import { tnDamData } from '../data/damData';
 
 const priorityColors = { P1: '#ef4444', P2: '#f97316', P3: '#eab308', P4: '#3b82f6' };
@@ -125,6 +126,10 @@ function MapView() {
   const [showHospitals, setShowHospitals] = useState(true);
   const [showZones, setShowZones] = useState(true);
   const [showDams, setShowDams] = useState(true);
+  const [showRadar, setShowRadar] = useState(false);
+  const [showSeismic, setShowSeismic] = useState(true);
+  const [radarTime, setRadarTime] = useState(null);
+  const [liveEarthquakes, setLiveEarthquakes] = useState([]);
 
   // Layer groups refs
   const layerGroupsRef = useRef({
@@ -133,6 +138,8 @@ function MapView() {
     teams: null,
     hospitals: null,
     dams: null,
+    radar: null,
+    seismic: null,
     userMarker: null,
     searchMarker: null,
   });
@@ -190,6 +197,8 @@ function MapView() {
         layerGroupsRef.current.teams = L.layerGroup().addTo(mapInstance);
         layerGroupsRef.current.hospitals = L.layerGroup().addTo(mapInstance);
         layerGroupsRef.current.dams = L.layerGroup().addTo(mapInstance);
+        layerGroupsRef.current.radar = L.layerGroup().addTo(mapInstance);
+        layerGroupsRef.current.seismic = L.layerGroup().addTo(mapInstance);
         layerGroupsRef.current.userMarker = L.layerGroup().addTo(mapInstance);
         layerGroupsRef.current.searchMarker = L.layerGroup().addTo(mapInstance);
 
@@ -772,6 +781,101 @@ function MapView() {
     });
   }, [map, leafletLib, showDams]);
 
+  // Live Rain Radar Layer (RainViewer Doppler overlay)
+  useEffect(() => {
+    if (!map || !leafletLib || !layerGroupsRef.current.radar) return;
+    const group = layerGroupsRef.current.radar;
+    group.clearLayers();
+
+    if (!showRadar) return;
+
+    fetchRainViewerRadarInfo().then((info) => {
+      if (info?.success && info.tileUrlTemplate) {
+        setRadarTime(info.formattedTime);
+        const radarTileLayer = leafletLib.tileLayer(info.tileUrlTemplate, {
+          opacity: 0.65,
+          zIndex: 300,
+          maxZoom: 18,
+        });
+        radarTileLayer.addTo(group);
+      }
+    });
+  }, [map, leafletLib, showRadar]);
+
+  // Live Seismic Activity Layer (USGS Feed)
+  useEffect(() => {
+    if (!map || !leafletLib || !layerGroupsRef.current.seismic) return;
+    const group = layerGroupsRef.current.seismic;
+    group.clearLayers();
+
+    if (!showSeismic) return;
+
+    fetchLiveSeismicTelemetry().then((res) => {
+      if (res?.regional) {
+        setLiveEarthquakes(res.regional);
+        res.regional.forEach((eq) => {
+          if (!eq.lat || !eq.lng) return;
+          const mag = eq.magnitude || 3.0;
+          const color = mag >= 4.5 ? '#ef4444' : '#f59e0b';
+          const size = Math.min(38, Math.max(26, Math.round(mag * 7.5)));
+
+          const icon = leafletLib.divIcon({
+            className: 'seismic-marker',
+            html: `
+              <div style="
+                width: ${size}px;
+                height: ${size}px;
+                background: rgba(15, 23, 42, 0.9);
+                border: 2px solid ${color};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 0 10px ${color}80;
+                font-family: monospace;
+                font-weight: bold;
+                font-size: 11px;
+                color: ${color};
+              ">
+                M${mag}
+              </div>
+            `,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+          });
+
+          const marker = leafletLib.marker([eq.lat, eq.lng], { icon }).addTo(group);
+          marker.bindPopup(`
+            <div style="font-family: Inter, sans-serif; min-width: 220px; background: #0f172a; padding: 12px; border-radius: 8px; border: 2px solid ${color}; color: #fff;">
+              <strong style="color: ${color}; font-size: 13px; display: block; margin-bottom: 6px;">🌍 USGS Live Seismic Event</strong>
+              <div style="font-size: 12px; line-height: 1.6;">
+                <div><strong>Magnitude:</strong> ${eq.magnitude}</div>
+                <div><strong>Location:</strong> ${eq.place}</div>
+                <div><strong>Depth:</strong> ${eq.depth} km</div>
+                <div><strong>Distance from TN:</strong> ${eq.distFromTN} km</div>
+                <div><strong>Time:</strong> ${new Date(eq.time).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          `);
+
+          marker.on('click', () => {
+            setSelectedEntity({
+              type: 'seismic',
+              data: {
+                name: `USGS M${eq.magnitude} Epicenter`,
+                areaName: eq.place,
+                lat: eq.lat,
+                lng: eq.lng,
+                depth: eq.depth,
+                distFromTN: eq.distFromTN,
+              },
+            });
+          });
+        });
+      }
+    });
+  }, [map, leafletLib, showSeismic]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header & Global Location Search Bar */}
@@ -791,14 +895,14 @@ function MapView() {
           {/* Manual Search Input with Quick Chips */}
           <div className="flex flex-col gap-1.5 w-full sm:w-96">
             <div className="relative w-full">
-              <div className="flex items-center bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white shadow-inner">
-                <Search className="h-4 w-4 text-slate-400 shrink-0 mr-2" />
+              <div className="flex items-center bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white shadow-inner">
+                <Search className="h-4 w-4 text-cyan-400 shrink-0 mr-3" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Type location (e.g. Madurai, Salem, Coimbatore)..."
-                  className="bg-transparent border-none text-white focus:outline-none w-full placeholder-slate-500 text-xs"
+                  className="bg-transparent border-none text-white focus:outline-none w-full placeholder-slate-400 text-xs pl-1"
                 />
                 {isSearching && (
                   <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
@@ -923,6 +1027,36 @@ function MapView() {
             }`}
           >
             📍 Monitored Sectors
+          </button>
+
+          <button
+            onClick={() => setShowRadar(!showRadar)}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+              showRadar
+                ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-700'
+            }`}
+            title="Toggle Live Rain Radar from RainViewer"
+          >
+            <span className="text-xs">🌧️ Live Radar</span>
+            {radarTime && <span className="text-[10px] text-cyan-200">({radarTime})</span>}
+          </button>
+
+          <button
+            onClick={() => setShowSeismic(!showSeismic)}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+              showSeismic
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-slate-500 hover:text-slate-300'
+            }`}
+            title="Toggle USGS Real-Time Earthquakes"
+          >
+            <span className="text-xs">🌍 Live USGS</span>
+            {liveEarthquakes.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 font-bold">
+                {liveEarthquakes.length}
+              </span>
+            )}
           </button>
         </div>
 

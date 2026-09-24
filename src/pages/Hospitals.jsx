@@ -169,13 +169,13 @@ function Hospitals() {
 
       {/* Filter / Search Bar */}
       <div className="glass-card p-4 flex items-center gap-3">
-        <Search className="h-5 w-5 text-slate-400 shrink-0" />
+        <Search className="h-5 w-5 text-cyan-400 shrink-0" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Filter hospitals by facility name or category..."
-          className="bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none w-full"
+          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full pl-2"
         />
         {searchTerm && (
           <button onClick={() => setSearchTerm('')} className="text-xs text-slate-400 hover:text-white">

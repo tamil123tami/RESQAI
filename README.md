@@ -1,286 +1,111 @@
-# RESQAI - AI-Powered Multi-Hazard Monitoring & Emergency Response System
+# RESQAI - AI-Powered Disaster Management & Emergency Response System
 
-![RESQAI](https://img.shields.io/badge/RESQAI-Emergency_Operations-blue?style=for-the-badge)
-![React](https://img.shields.io/badge/React-18.3-61dafb?style=flat-square&logo=react)
-![Vite](https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square&logo=vite)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=flat-square&logo=tailwindcss)
+RESQAI is a real-time emergency operations center (EOC) dashboard built for Tamil Nadu disaster management. It provides multi-hazard monitoring, AI-powered risk analysis, dam water-level tracking, and coordinated emergency response.
 
-**RESQAI** is a comprehensive emergency operations center (EOC) dashboard for real-time multi-hazard monitoring, AI-powered risk analysis, and coordinated emergency response across affected areas.
+## Tech Stack
 
----
+- **Frontend**: React 18 + Vite 5
+- **Styling**: Tailwind CSS 3
+- **Maps**: Leaflet + React Leaflet
+- **Charts**: Recharts
+- **Routing**: React Router v6
+- **AI**: Groq + Gemini LLM integration
 
-## 🌟 Features
+## Features
 
-### 📊 **Dashboard (Real-time Operations Center)**
-- **Live Statistics**: Active hazards, monitored areas, deployed teams, and current risk levels
-- **Hazard Risk Overview**: Interactive donut chart showing distribution of Flood, Cyclone, Earthquake, and Volcanic risks
-- **Affected Areas**: Real-time risk percentages with color-coded priority levels (P1-P4)
-- **Change Trend Analysis**: Time-series visualization of risk escalation
-- **Live Sensor Data**: Real-time monitoring of rainfall, water level, wind speed, and seismic activity with threshold indicators
-- **Recent Alerts Ticker**: Latest critical, warning, and info alerts with timestamps
+**Commercial Monetization & Enterprise Hub (`/business`)** - Full-fledged commercialization engine comprising:
+- **InsurTech Parametric Claim Verifier**: Instant automated telemetry-backed claim evaluation for ICICI Lombard, HDFC ERGO, Swiss Re, etc., cutting surveyor lag from 45 days to 48 hours with tamper-evident SHA-256 cryptographic certificates.
+- **Enterprise Asset Safeguard & BCM**: Infrastructure vulnerability profiling for ports (Chennai/Ennore), auto-clusters (Sriperumbudur), and IT parks (OMR) with business interruption financial exposure calculators and exportable BCP dossiers.
+- **Developer API Gateway & Billing**: Live key provisioning (`resq_live_...`), interactive REST console with cURL/Python/Node.js snippets, tiered pricing plans (₹0 to ₹2.49L/mo), and GST tax invoice generation.
+- **B2G GeM Tender Bid Generator**: Prepares government tender RFP responses conforming to NDMA standards and DPIIT Startup India exemptions under GFR 2017 Rule 173(i).
+- **12-Month GTM & Grants Roadmap**: Interactive execution tracker with access to non-dilutive grant programs (MeitY TIDE 2.0, SISFS ₹50L, NDMA Fund).
+- **Disaster Loss Mitigation & ROI Calculator**: Dynamic scenario presets (Chennai Metro, Cuddalore Coastal Surge, Kaveri Basin Surcharge) demonstrating ₹1 = ₹7.80 loss averted.
 
-### 🚨 **Alerts & Communication**
-- **Public & Controller Alerts**: Separate views for public advisories and internal controller notifications
-- **Alert Management**: Approve, view, and track alerts with risk change visualization (previous → current)
-- **RESQAI Alert Details**: Precautions, emergency contacts, and recommended actions
-- **Priority-based Alerts**: Critical (red), Warning (yellow), Info (blue) with visual indicators
+**Real-Time Telemetry Center (`/telemetry`)** - Multi-district live atmospheric telemetry streamed via Open-Meteo, real-time regional & global seismic events from USGS, Bay of Bengal coastal wave & swell buoys, CWC reservoir hydro-telemetry, and live network latency & JSON packet inspector.
 
-### 🗺️ **Area Analysis & Prioritization**
-- **Interactive Heatmap**: SVG-based hazard risk visualization with 100km radius
-- **Area Details Panel**: Population affected, primary hazards, and risk percentages
-- **Priority Color Coding**: P1 (red), P2 (orange), P3 (yellow), P4 (green)
-- **Geographic Distribution**: Monitoring Cuddalore, Chidambaram, Panruti, Virudhachalam, and surrounding areas
+**Live Doppler Weather Radar (`/map`)** - Interactive precipitation Doppler radar tile overlay powered by RainViewer API with live USGS earthquake pins.
 
-### 🏥 **Hospitals & Medical Support**
-- **Hospital Statistics**: Total hospitals, available beds, ambulances, emergency-ready facilities
-- **Bed Availability Matrix**: Real-time free bed counts with occupancy indicators
-- **Distance & Type**: Multi-speciality, general, and super-speciality hospital tracking
-- **Controller-Only Data**: Sensitive medical capacity data visible only to authorized personnel
+**Dashboard** - Live statistics, hazard risk overview, sensor data (rainfall, water level, wind speed, seismic), and alert ticker.
 
-### 👥 **ResQ Team Deployment**
-- **Team Overview**: 5 specialized response units (Alpha, Bravo, Charlie, Delta, Echo)
-- **Deployment Status**: Real-time tracking of deployed vs standby teams
-- **Equipment Inventory**: Rescue boats, medical kits, search dogs, drones, relief supplies
-- **Deployment Workflow**: 3-step visualization (Authority Allocates → Team Notified → Field Response)
-- **Team Management**: Reassign and recall capabilities
+**Dam Monitoring** - Real-time water levels for 13 dams supplying water to Tamil Nadu, including Kaveri basin dams in Karnataka (KRS, Kabini, Hemavathy).
 
-### 📋 **Measures & Recommendations**
-- **Actionable Checklist**: Priority-based recommendations (Immediate, High, Ongoing)
-- **Progress Tracking**: Interactive checkboxes to mark actions as completed
-- **Status Indicators**: Pending, In Progress, Completed, Active
-- **Emergency Contacts**: Quick access to 112, 108, 1077 helplines
-- **Continuous Loop Visualization**: 8-step MONITOR → DETECT → ANALYSE → ALERT → PRIORITIZE → DEPLOY → RESCUE → UPDATE cycle
+**Alerts & Communication** - Public advisories and controller notifications with priority levels (Critical, Warning, Info) and CAP v1.2 compliance.
 
----
+**Area Analysis** - Interactive heatmap with priority-based risk visualization across monitored districts.
 
-## 🎨 Design Highlights
+**Hospitals** - Bed availability, ambulance tracking, and emergency-ready facility status.
 
-- **Dark Theme**: Slate-900 background with glass morphism cards (backdrop blur, translucent overlays)
-- **Color-Coded Priorities**: Consistent color language across all views
-  - 🔴 P1/Critical: Red (#ef4444)
-  - 🟠 P2/Warning: Orange (#f97316)
-  - 🟡 P3/Medium: Yellow (#eab308)
-  - 🟢 P4/Low: Green (#22c55e)
-- **Real-time Animations**: Pulsing indicators, live sensor updates every 3 seconds
-- **Responsive Layout**: Mobile-first design with adaptive grid layouts
-- **Professional Iconography**: Lucide React icons throughout
+**ResQ Teams** - Deployment tracking for 5 specialized response units with equipment inventory.
 
----
+**AI Copilot** - LLM-powered assistant with intent detection for autonomous team dispatch, WhatsApp alerts, and ambulance routing.
 
-## 🚀 Quick Start
+**Incident Reports** - Field reporting and mission status tracking.
 
-### Prerequisites
-- **Node.js** 16+ and **npm** 8+
+## Setup
 
-### Installation
-
-\`\`\`bash
-# Navigate to project directory
-cd C:/Users/tamil/Desktop/cit
-
-# Install dependencies
+```bash
 npm install
-
-# Start development server
 npm run dev
-\`\`\`
+```
 
-The application will launch at **http://localhost:3000**
+The app runs at `http://localhost:5173`.
 
-### Build for Production
+## Environment Variables
 
-\`\`\`bash
-# Create optimized production build
+Create a `.env` file in the project root:
+
+```
+VITE_GROQ_API_KEY=your_groq_key
+VITE_GEMINI_API_KEY=your_gemini_key
+VITE_OPENWEATHER_API_KEY=your_openweather_key
+```
+
+## Build & Deploy
+
+```bash
 npm run build
+```
 
-# Preview production build
-npm run preview
-\`\`\`
+The `dist/` folder is ready for deployment to Netlify, Vercel, or any static host.
 
----
+## Project Structure
 
-## 📁 Project Structure
+```
+src/
+  App.jsx                  # Root component with routing
+  main.jsx                 # Entry point
+  pages/                   # Page components
+    Dashboard.jsx          # Main operations center
+    Dams.jsx               # Dam water level monitoring
+    Alerts.jsx             # Alert management
+    MapView.jsx            # Interactive map
+    Hospitals.jsx          # Hospital & medical tracking
+    Teams.jsx              # ResQ team deployment
+    Recommendations.jsx    # Action items & measures
+    IncidentReports.jsx    # Field incident reports
+    MissionStatus.jsx      # Mission tracking
+    FieldTasks.jsx         # Field task management
+    AdminDashboard.jsx     # Admin panel
+  components/
+    Layout/                # App layout & navigation
+    AICopilot/             # AI assistant chatbot
+    LiveDataDashboard.jsx  # Real-time data widgets
+    ResourceTracker.jsx    # Resource management
+    Notifications.jsx      # Notification system
+  services/
+    weatherService.js      # OpenWeather API integration
+    liveDataService.js     # Real-time data feeds
+    llmIntegration.js      # Groq & Gemini AI
+    locationService.js     # Geolocation services
+    dataIntegration.js     # Data aggregation
+    notificationService.js # Push notifications
+    whatsappService.js     # WhatsApp alerts
+  data/
+    damData.js             # Tamil Nadu dam telemetry
+    mockData.js            # Demo/fallback data
+  context/                 # React context providers
+```
 
-\`\`\`
-cit/
-├── public/
-│   └── vite.svg                    # RESQAI logo
-├── src/
-│   ├── components/
-│   │   └── Layout/
-│   │       └── Layout.jsx          # Main layout with sidebar + header
-│   ├── data/
-│   │   └── mockData.js             # Mock data (areas, hospitals, teams, alerts)
-│   ├── pages/
-│   │   ├── Dashboard.jsx           # Main operations dashboard
-│   │   ├── Alerts.jsx              # Alert management & communication
-│   │   ├── MapView.jsx             # Area analysis with heatmap
-│   │   ├── Hospitals.jsx           # Hospital & medical support
-│   │   ├── Teams.jsx               # ResQ team deployment
-│   │   └── Recommendations.jsx     # Measures & action checklist
-│   ├── App.jsx                     # Router configuration
-│   ├── main.jsx                    # App entry point
-│   └── index.css                   # Tailwind + custom styles
-├── index.html                      # HTML template
-├── vite.config.js                  # Vite configuration
-├── tailwind.config.js              # Tailwind theme customization
-├── postcss.config.js               # PostCSS configuration
-└── package.json                    # Dependencies & scripts
-\`\`\`
+## License
 
----
-
-## 🛠️ Tech Stack
-
-| Category | Technology |
-|----------|-----------|
-| **Frontend Framework** | React 18.3.1 |
-| **Build Tool** | Vite 5.4.2 |
-| **Styling** | Tailwind CSS 3.4.10 |
-| **Routing** | React Router DOM 6.26.0 |
-| **Charts** | Recharts 2.12.7 |
-| **Icons** | Lucide React 0.441.0 |
-| **Language** | JavaScript (ES6+) |
-
----
-
-## 🎯 Key Components
-
-### Dashboard
-- **Stat Cards**: 4 KPI cards with animated gradients
-- **Donut Chart**: Hazard distribution visualization (Recharts PieChart)
-- **Area Chart**: Risk trend over time (Recharts AreaChart)
-- **Sensor Panel**: Live updates with threshold progress bars
-
-### Alerts
-- **Tab System**: Public vs Controller alerts
-- **Alert Cards**: Risk change visualization with approve/view actions
-- **Sidebar**: Selected alert details with precautions & contacts
-
-### Map View
-- **SVG Heatmap**: Custom-built with radial gradients and pulse animations
-- **Area Markers**: Color-coded by priority with population data
-- **Info Panel**: Shows affected areas, damages, priority levels
-
-### Hospitals
-- **Stats Row**: 4 metrics (hospitals, beds, ambulances, emergency-ready)
-- **Data Table**: Sortable with bed occupancy progress bars
-- **Controller Note**: Privacy notice for sensitive medical data
-
-### Teams
-- **Team Cards**: 2-column grid showing 5 specialized units
-- **Status Badges**: Deployed (green pulse) vs Standby (yellow)
-- **Workflow Viz**: 3-step deployment process diagram
-
-### Recommendations
-- **Action Checklist**: Interactive checkboxes with priority badges
-- **Progress Summary**: Completion tracking with progress bars
-- **Continuous Loop**: 8-step cyclical process visualization
-
----
-
-## 📊 Data Model
-
-### Monitored Areas
-Each area includes:
-- Name, coordinates (lat/lng), population
-- Risk percentage, priority level (P1-P4)
-- Hazard breakdown (flood, cyclone, earthquake, volcanic)
-- Previous risk for trend comparison
-
-### Hospitals
-Each hospital includes:
-- Name, location, distance from controller
-- Free beds, total beds, occupancy percentage
-- Type (Multi-speciality, General, Super-speciality)
-- Ambulance count, emergency readiness status
-
-### ResQ Teams
-Each team includes:
-- Team ID (RESQ-01 through RESQ-05)
-- Name (Alpha, Bravo, Charlie, Delta, Echo)
-- Leader, member count, deployment status
-- Assigned area, equipment list, vehicle type
-- Deployment timestamp
-
-### Alerts
-Each alert includes:
-- Type (critical, warning, info)
-- Hazard type (flood, cyclone, earthquake, volcanic)
-- Area, previous/current risk percentages
-- Recommended actions, approval status
-- Timestamp, public/controller visibility
-
----
-
-## 🎨 Customization
-
-### Color Palette
-Edit `tailwind.config.js` to customize the color scheme:
-
-\`\`\`javascript
-colors: {
-  resq: {
-    primary: '#1a365d',    // Dark blue
-    secondary: '#2b6cb0',  // Blue
-    accent: '#ed8936',     // Orange
-    danger: '#e53e3e',     // Red
-    success: '#38a169',    // Green
-    warning: '#d69e2e',    // Yellow
-  }
-}
-\`\`\`
-
-### Mock Data
-Edit `src/data/mockData.js` to:
-- Add/remove monitored areas
-- Update hospital information
-- Configure ResQ teams
-- Modify alert templates
-
----
-
-## 🔒 Security Considerations
-
-- **Controller-Only Data**: Hospital bed availability is marked as sensitive
-- **Role-Based Views**: Public alerts vs controller-specific notifications
-- **Data Privacy**: No personally identifiable information in public displays
-
----
-
-## 🚧 Future Enhancements
-
-- [ ] Real API integration (replace mock data)
-- [ ] WebSocket for true real-time updates
-- [ ] User authentication & role-based access control
-- [ ] Historical data analytics & reporting
-- [ ] Mobile app (React Native)
-- [ ] SMS/Email alert notifications
-- [ ] GIS integration with live satellite imagery
-- [ ] Predictive AI models for risk forecasting
-- [ ] Multi-language support (Tamil, Hindi, English)
-
----
-
-## 📄 License
-
-This project is developed as an emergency management system demonstration. For production deployment, ensure compliance with local data privacy and emergency response regulations.
-
----
-
-## 🤝 Contributing
-
-Built with ❤️ for emergency response operations. The system is designed to save lives through timely information, coordinated response, and data-driven decision-making.
-
----
-
-## 📞 Emergency Contacts
-
-- **Emergency**: 112
-- **Ambulance**: 108
-- **Disaster Helpline**: 1077
-- **Flood Control**: 1070
-
----
-
-**Note**: This is a demonstration system. For actual emergency operations, integrate with official meteorological, seismological, and disaster management authority data sources.
+MIT

@@ -11,7 +11,7 @@ const API_CONFIG = {
   // India Meteorological Department (IMD)
   IMD_WEATHER: {
     baseUrl: 'https://api.weather.gov.in/v1',
-    apiKey: process.env.VITE_IMD_API_KEY || 'YOUR_IMD_API_KEY',
+    apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_IMD_API_KEY) || 'YOUR_IMD_API_KEY',
     endpoints: {
       currentWeather: '/current',
       forecast: '/forecast',
@@ -23,7 +23,7 @@ const API_CONFIG = {
   // National Center for Seismology (NCS)
   SEISMOLOGY: {
     baseUrl: 'https://seismo.gov.in/api/v1',
-    apiKey: process.env.VITE_SEISMOLOGY_API_KEY || 'YOUR_SEISMOLOGY_API_KEY',
+    apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SEISMOLOGY_API_KEY) || 'YOUR_SEISMOLOGY_API_KEY',
     endpoints: {
       recentEarthquakes: '/earthquakes/recent',
       liveSeismic: '/live',
@@ -33,7 +33,7 @@ const API_CONFIG = {
   // ISRO Satellite Data
   ISRO_SATELLITE: {
     baseUrl: 'https://bhuvan-app1.nrsc.gov.in/api',
-    apiKey: process.env.VITE_ISRO_API_KEY || 'YOUR_ISRO_API_KEY',
+    apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ISRO_API_KEY) || 'YOUR_ISRO_API_KEY',
     endpoints: {
       satelliteImagery: '/satellite/latest',
       cycloneTrack: '/cyclone/track',
@@ -53,7 +53,7 @@ const API_CONFIG = {
   // OpenWeatherMap (Backup/International)
   OPENWEATHER: {
     baseUrl: 'https://api.openweathermap.org/data/2.5',
-    apiKey: process.env.VITE_OPENWEATHER_API_KEY || 'YOUR_OPENWEATHER_API_KEY',
+    apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENWEATHER_API_KEY) || 'YOUR_OPENWEATHER_API_KEY',
     endpoints: {
       weather: '/weather',
       forecast: '/forecast',

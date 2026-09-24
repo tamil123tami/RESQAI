@@ -38,3 +38,6 @@ coverage/
 # Claude Code
 .claude/
 node_modules
+
+node_modules
+.netlify
