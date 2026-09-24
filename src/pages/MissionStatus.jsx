@@ -3,13 +3,12 @@ import { CheckCircle2, Clock, MapPin, Users, FileText, AlertCircle, Award } from
 import { useApp } from '../context/AppContext';
 
 function MissionStatus() {
-  const { teams, recallTeam, showNotification } = useApp();
+  const { teams, completedMissions, completeMission, showNotification } = useApp();
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [completionReport, setCompletionReport] = useState('');
 
   // Get only deployed teams
   const deployedTeams = teams.filter(t => t.status === 'deployed');
-  const completedMissions = teams.filter(t => t.missionCompleted);
 
   const handleMarkComplete = (team) => {
     console.log('✅ Marking mission complete for:', team.name);
@@ -27,18 +26,7 @@ function MissionStatus() {
     console.log(`✅ Mission completed: ${selectedTeam.name}`);
     console.log(`📝 Report: ${completionReport}`);
 
-    // Recall the team (this returns resources to available pool)
-    recallTeam(selectedTeam.id);
-
-    // Show success notification
-    showNotification({
-      id: Date.now(),
-      type: 'team',
-      title: 'MISSION COMPLETED',
-      message: `${selectedTeam.name} mission completed. Team returning to base. ${selectedTeam.members} personnel now available.`,
-      severity: 'low',
-      timestamp: new Date().toISOString(),
-    });
+    completeMission(selectedTeam.id, completionReport.trim());
 
     // Reset form
     setCompletionReport('');
@@ -84,7 +72,7 @@ function MissionStatus() {
           </div>
           <div>
             <p className="text-2xl font-bold text-white">{completedMissions.length}</p>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Completed Today</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Completed Missions</p>
           </div>
         </div>
 

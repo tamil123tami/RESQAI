@@ -1,0 +1,365 @@
+/* Professional Light Theme - Global Overrides */
+
+/* Remove all cyber/neon effects */
+.cyber-grid,
+.glow-cyan,
+[class*="shadow-cyan"],
+[class*="shadow-blue"],
+[class*="shadow-purple"],
+[class*="shadow-indigo"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* AGGRESSIVE: Convert ALL dark backgrounds to light */
+[class*="bg-slate-9"],
+[class*="bg-slate-8"],
+[class*="bg-gray-9"],
+[class*="bg-gray-8"],
+.bg-slate-950,
+.bg-slate-900,
+.bg-slate-800,
+.bg-slate-700,
+.bg-gray-950,
+.bg-gray-900,
+.bg-gray-800,
+.bg-gray-700 {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.bg-slate-800\/80,
+.bg-slate-800\/60,
+.bg-slate-800\/50,
+.bg-slate-800\/40,
+.bg-slate-900\/90,
+.bg-slate-900\/80,
+.bg-slate-900\/60,
+.bg-gray-800\/80,
+.bg-gray-900\/90 {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Force all divs with dark backgrounds */
+div[class*="bg-slate-"],
+div[class*="bg-gray-"],
+section[class*="bg-slate-"],
+section[class*="bg-gray-"] {
+  background-color: #ffffff !important;
+}
+
+/* Convert dark borders to light */
+.border-slate-800,
+.border-slate-700,
+.border-slate-600 {
+  border-color: #e5e7eb !important;
+}
+
+/* Convert ALL light text to dark - Comprehensive */
+.text-slate-50,
+.text-slate-100,
+.text-slate-200,
+.text-gray-50,
+.text-gray-100,
+.text-gray-200 {
+  color: #1e293b !important;
+}
+
+.text-slate-300,
+.text-gray-300 {
+  color: #475569 !important;
+}
+
+.text-slate-400,
+.text-gray-400 {
+  color: #64748b !important;
+}
+
+.text-slate-500,
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* White text on light backgrounds = dark text */
+.text-white:not([class*="bg-"]) {
+  color: #1e293b !important;
+}
+
+/* Specific overrides for common elements */
+h1, h2, h3, h4, h5, h6,
+.font-bold,
+.font-semibold,
+.font-medium {
+  color: #0f172a !important;
+}
+
+p, span, div, label {
+  color: inherit;
+}
+
+/* Force readable text in cards */
+.glass-card *,
+.glass-panel *,
+.card *,
+.bg-white * {
+  color: #1e293b;
+}
+
+.glass-card .text-slate-400,
+.glass-panel .text-slate-400,
+.card .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Override for specific elements that should stay light */
+.bg-cyan-600 *,
+.bg-blue-600 *,
+.bg-emerald-600 *,
+.bg-green-600 *,
+.bg-red-600 *,
+.bg-orange-600 *,
+.bg-yellow-600 *,
+.bg-indigo-600 *,
+.bg-purple-600 *,
+.bg-pink-600 * {
+  color: #ffffff !important;
+}
+
+/* Professional buttons */
+.bg-gradient-to-r {
+  background-image: none !important;
+}
+
+/* Clean cards */
+.glass-card,
+.glass-panel {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Remove neon glows on focus */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #0891b2 !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Professional status badges */
+.bg-emerald-500\/20 {
+  background-color: #d1fae5 !important;
+}
+
+.text-emerald-400,
+.text-emerald-300 {
+  color: #059669 !important;
+}
+
+.bg-cyan-500\/20 {
+  background-color: #cffafe !important;
+}
+
+.text-cyan-400,
+.text-cyan-300 {
+  color: #0891b2 !important;
+}
+
+.bg-blue-500\/20 {
+  background-color: #dbeafe !important;
+}
+
+.text-blue-400,
+.text-blue-300 {
+  color: #2563eb !important;
+}
+
+.bg-red-500\/20 {
+  background-color: #fee2e2 !important;
+}
+
+.text-red-400,
+.text-red-300 {
+  color: #dc2626 !important;
+}
+
+/* Remove excessive font weights */
+.font-black {
+  font-weight: 600 !important;
+}
+
+.tracking-widest {
+  letter-spacing: 0.05em !important;
+}
+
+/* Professional spacing */
+.shadow-2xl {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Force all table text to be dark */
+table,
+table th,
+table td {
+  color: #1e293b !important;
+}
+
+/* Force all button text to be appropriate */
+button:not([class*="bg-cyan"]):not([class*="bg-blue"]):not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-emerald"]) {
+  color: #1e293b !important;
+}
+
+/* Input fields */
+input,
+select,
+textarea {
+  color: #1e293b !important;
+  background-color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Navigation text */
+nav,
+nav a,
+nav button,
+nav span {
+  color: inherit;
+}
+
+/* Ensure stats and metrics are visible */
+.text-2xl,
+.text-3xl,
+.text-4xl,
+.text-xl {
+  color: #0f172a !important;
+}
+
+/* Status badges need proper contrast */
+.bg-red-500\/20,
+.bg-red-50 {
+  background-color: #fef2f2 !important;
+}
+
+.bg-emerald-500\/20,
+.bg-emerald-50,
+.bg-green-50 {
+  background-color: #f0fdf4 !important;
+}
+
+.bg-blue-500\/20,
+.bg-blue-50 {
+  background-color: #eff6ff !important;
+}
+
+.bg-yellow-500\/20,
+.bg-yellow-50 {
+  background-color: #fefce8 !important;
+}
+
+.bg-orange-500\/20,
+.bg-orange-50 {
+  background-color: #fff7ed !important;
+}
+
+/* Make sure all chart labels are visible */
+.recharts-text {
+  fill: #1e293b !important;
+}
+
+.recharts-label {
+  fill: #1e293b !important;
+}
+
+/* Modal and overlay text */
+.fixed .glass-card *,
+.absolute .glass-card * {
+  color: #1e293b;
+}
+
+/* CRITICAL: Force specific dark sections to be light */
+div[style*="background"] {
+  background: #ffffff !important;
+}
+
+/* Remove any remaining dark overlays */
+.bg-black,
+.bg-black\/70,
+.bg-black\/50 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Weather cards and info panels */
+[class*="glass"] {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Professional font for the entire app */
+body, input, button, select, textarea {
+  font-family: 'Open Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Roboto', 'Open Sans', 'Segoe UI', sans-serif !important;
+}
+
+/* Remove font-mono everywhere */
+.font-mono {
+  font-family: 'Open Sans', 'Segoe UI', sans-serif !important;
+}
+
+/* Make dark overlays lighter */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Fix rounded corners to be more professional */
+.rounded-xl,
+.rounded-2xl {
+  border-radius: 8px !important;
+}
+
+/* Ensure bordered elements are visible */
+[class*="border-slate-7"],
+[class*="border-slate-8"],
+[class*="border-gray-7"],
+[class*="border-gray-8"] {
+  border-color: #e5e7eb !important;
+}
+
+/* FORCE sidebar to be white */
+aside {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* FORCE main area to be light */
+main {
+  background-color: #f8fafc !important;
+}
+
+/* FORCE header to be white */
+header {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Remove ALL gradient backgrounds */
+[class*="bg-gradient"],
+[style*="background: linear-gradient"],
+[style*="background:linear-gradient"] {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Make sure weather widget is visible */
+.text-emerald-400,
+.text-emerald-500 {
+  color: #059669 !important;
+}

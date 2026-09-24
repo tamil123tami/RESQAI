@@ -23,19 +23,22 @@ function Notifications() {
         return (
           <div
             key={notification.id}
-            className={`glass-card p-4 border-l-4 ${config.border} ${config.bg} shadow-xl animate-slide-in`}
+            className={`glass-card notification-enter p-4 border-l-4 ${config.border} ${config.bg} shadow-xl rounded-lg hover-lift`}
+            style={{ animationDelay: '0.1s' }}
           >
             <div className="flex items-start gap-3">
-              <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
+              <div className={`p-2 rounded-lg ${config.bg}`}>
+                <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0`} />
+              </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold text-white mb-1">{notification.title}</h4>
-                <p className="text-xs text-slate-300">{notification.message}</p>
+                <p className="text-xs text-slate-300 leading-relaxed">{notification.message}</p>
               </div>
               <button
                 onClick={() => removeNotification(notification.id)}
-                className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+                className="p-1.5 hover:bg-white/10 rounded-lg transition-all duration-200 flex-shrink-0 hover:scale-110"
               >
-                <X className="h-4 w-4 text-slate-400" />
+                <X className="h-4 w-4 text-slate-400 hover:text-white transition-colors" />
               </button>
             </div>
           </div>

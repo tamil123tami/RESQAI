@@ -1,32 +1,27 @@
 import { useState } from 'react';
-import { Bell, MapPin, TrendingUp, AlertTriangle, Phone, CheckCircle2, Info, Filter, X } from 'lucide-react';
+import { Bell, MapPin, AlertTriangle, Phone, CheckCircle2, Info, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { emergencyContacts, precautions } from '../data/mockData';
 
 function Alerts() {
-  const { getFilteredAlerts, updateAlertStatus, alertFilter, setAlertFilter } = useApp();
+  const { alerts: allAlerts, getFilteredAlerts, updateAlertStatus, alertFilter, setAlertFilter } = useApp();
   const [selectedAlert, setSelectedAlert] = useState(null);
 
   const alerts = getFilteredAlerts();
 
   const handleResolve = (alertId) => {
-    console.log('✅ Resolving alert:', alertId);
     updateAlertStatus(alertId, 'resolved');
   };
 
   const handleReopen = (alertId) => {
-    console.log('🔄 Reopening alert:', alertId);
     updateAlertStatus(alertId, 'active');
   };
 
-  const getFilterStats = () => {
-    const allAlerts = getFilteredAlerts();
-    const activeCount = allAlerts.filter(a => a.status === 'active').length;
-    const resolvedCount = allAlerts.filter(a => a.status === 'resolved').length;
-    return { all: allAlerts.length, active: activeCount, resolved: resolvedCount };
+  const stats = {
+    all: allAlerts.length,
+    active: allAlerts.filter(a => a.status === 'active').length,
+    resolved: allAlerts.filter(a => a.status === 'resolved').length,
   };
-
-  const stats = getFilterStats();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -236,9 +231,9 @@ function Alerts() {
             </h3>
             <div className="space-y-3">
               {emergencyContacts.map((contact) => (
-                <div key={contact.id} className="p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/60 transition-colors">
+                <div key={contact.number} className="p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/60 transition-colors">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-white">{contact.name}</span>
+                    <span className="text-sm font-semibold text-white">{contact.label}</span>
                   </div>
                   <a
                     href={`tel:${contact.number}`}

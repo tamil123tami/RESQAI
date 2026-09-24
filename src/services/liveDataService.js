@@ -2,11 +2,11 @@
 // Fetches real-time disaster data from actual APIs
 
 const TAMIL_NADU_BOUNDS = {
-  north: 13.5,
+  north: 19.5,  // Expanded north to cover AP and Karnataka
   south: 8.0,
-  east: 80.5,
-  west: 76.5,
-  center: { lat: 11.1271, lng: 78.6569 }, // Chennai
+  east: 84.5,   // Expanded east for AP coast
+  west: 74.0,   // Expanded west for Karnataka
+  center: { lat: 13.0827, lng: 80.2707 }, // Chennai
 };
 
 // Major cities in Tamil Nadu for monitoring

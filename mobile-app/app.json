@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "ResQ Field Responder",
+    "slug": "resq-field-responder",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "gov.in.resqai.responder",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ResQ AI requires GPS coordinates to log field responder telemetry and victim rescue points.",
+        "NSMicrophoneUsageDescription": "ResQ AI hands-free voice operations requires microphone access for voice-guided dispatch and triage.",
+        "NSCameraUsageDescription": "ResQ AI requires camera access to document flood inundation levels and structural damage."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
+      "package": "gov.in.resqai.responder",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO",
+        "CAMERA",
+        "VIBRATE",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ResQ AI to track team coordinates during active disaster deployment."
+        }
+      ]
+    ]
+  }
+}

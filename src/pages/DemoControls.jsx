@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Zap, MapPin, AlertTriangle, Droplets, Wind, Activity, Mountain, Plus, Trash2, Play, Navigation, Hospital, X, Clock, Bed, Ambulance } from 'lucide-react';
+import { Zap, MapPin, AlertTriangle, Droplets, Wind, Activity, Mountain, Plus, Trash2, Play, Navigation, Hospital, X, Clock, Ambulance, Smartphone, MessageSquare } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { monitoredAreas, hospitals } from '../data/mockData';
+import { sendSOSAlert } from '../services/notificationService';
 
 const disasterTypes = [
   { id: 'flood', label: 'Flood', icon: Droplets, color: '#3b82f6', emoji: '🌊' },
   { id: 'cyclone', label: 'Cyclone', icon: Wind, color: '#8b5cf6', emoji: '🌀' },
   { id: 'earthquake', label: 'Earthquake', icon: Activity, color: '#f59e0b', emoji: '🌍' },
-  { id: 'volcanic', label: 'Volcanic Eruption', icon: Mountain, color: '#ef4444', emoji: '🌋' },
 ];
 
 const severityLevels = [
@@ -18,10 +18,11 @@ const severityLevels = [
 ];
 
 function DemoControls() {
-  const { disasters, addDisaster, removeDisaster, clearAllDisasters } = useApp();
+  const { disasters, addDisaster, removeDisaster, completeDisaster, clearAllDisasters, addSOSBeacon, dispatchAmbulance } = useApp();
   const [selectedDisaster, setSelectedDisaster] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
   const [showRouteModal, setShowRouteModal] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [formData, setFormData] = useState({
     location: 'Cuddalore', // Default location so button works immediately
     customLat: '',
@@ -124,12 +125,7 @@ function DemoControls() {
 
   const handleClearAll = () => {
     console.log('🧹 Clear All clicked');
-    if (confirm('Clear all active disasters? This will affect all pages.')) {
-      console.log('✅ Clearing all disasters');
-      clearAllDisasters();
-    } else {
-      console.log('❌ Clear cancelled');
-    }
+    setShowClearConfirm(true);
   };
 
   const handleSimulateRealtime = () => {
@@ -508,28 +504,53 @@ function DemoControls() {
               {disasters.map(disaster => {
                 const type = disasterTypes.find(d => d.id === disaster.type);
                 const severity = severityLevels.find(s => s.value === disaster.severity);
+                const statusColors = {
+                  active: { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/40', label: 'ACTIVE' },
+                  assigned: { bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/40', label: 'TEAM ASSIGNED' },
+                  completed: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/40', label: 'COMPLETED' },
+                };
+                const sc = statusColors[disaster.status] || statusColors.active;
                 return (
                   <div
                     key={disaster.id}
-                    className="p-4 rounded-xl border-l-4 bg-slate-800/40 hover:bg-slate-800/60 transition-colors"
-                    style={{ borderLeftColor: type?.color }}
+                    className={`p-4 rounded-xl border-l-4 transition-colors ${disaster.status === 'completed' ? 'bg-slate-800/20 opacity-60' : 'bg-slate-800/40 hover:bg-slate-800/60'}`}
+                    style={{ borderLeftColor: disaster.status === 'completed' ? '#22c55e' : disaster.status === 'assigned' ? '#3b82f6' : type?.color }}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{type?.emoji}</span>
                         <div>
                           <h4 className="text-sm font-bold text-white">{disaster.areaName}</h4>
-                          <p className="text-xs text-slate-400">{type?.label}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-slate-400">{type?.label}</p>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${sc.bg} ${sc.text} border ${sc.border}`}>
+                              {sc.label}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteDisaster(disaster.id)}
-                        className="p-1 hover:bg-red-500/20 rounded transition-all hover:scale-110 active:scale-90"
-                        title="Delete disaster"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-400 hover:text-red-300" />
-                      </button>
+                      {disaster.status !== 'completed' && (
+                        <button
+                          onClick={() => handleDeleteDisaster(disaster.id)}
+                          className="p-1 hover:bg-red-500/20 rounded transition-all hover:scale-110 active:scale-90"
+                          title="Delete disaster"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-400 hover:text-red-300" />
+                        </button>
+                      )}
                     </div>
+
+                    {disaster.assignedTeamName && (
+                      <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs text-blue-300 font-semibold flex items-center gap-1.5">
+                        <span>🚁</span> Assigned: {disaster.assignedTeamName}
+                      </div>
+                    )}
+
+                    {disaster.nearestHospitalName && (
+                      <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-xs text-green-300 font-medium flex items-center gap-1.5">
+                        <Hospital className="h-3.5 w-3.5" /> Nearest: {disaster.nearestHospitalName} ({disaster.nearestHospitalDistance} km)
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
@@ -553,14 +574,25 @@ function DemoControls() {
                         <p className="text-xs text-slate-400 mt-2">{disaster.description}</p>
                       )}
 
-                      {/* Find Route Button */}
-                      <button
-                        onClick={() => handleFindRoute(disaster)}
-                        className="w-full mt-3 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
-                      >
-                        <Navigation className="h-4 w-4" />
-                        Find Nearest Hospital Route
-                      </button>
+                      {disaster.status !== 'completed' && (
+                        <>
+                          <button
+                            onClick={() => handleFindRoute(disaster)}
+                            className="w-full mt-3 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
+                          >
+                            <Navigation className="h-4 w-4" />
+                            Find Nearest Hospital Route
+                          </button>
+
+                          <button
+                            onClick={() => completeDisaster(disaster.id)}
+                            className="w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
+                          >
+                            <AlertTriangle className="h-4 w-4" />
+                            Mark as Completed
+                          </button>
+                        </>
+                      )}
 
                       <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-700/50">
                         <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -580,18 +612,100 @@ function DemoControls() {
         </div>
       </div>
 
-      {/* Export/Integration Info */}
-      <div className="glass-card p-5 border-l-4 border-l-blue-500 bg-blue-500/5">
-        <h4 className="text-sm font-semibold text-blue-400 mb-2">💡 Integration Tip</h4>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Active disasters are stored in component state. To integrate with the main dashboard:
+      {/* ── CITIZEN WEBHOOK SIMULATOR ── */}
+      <div className="glass-card p-6 border-l-4 border-l-orange-500 relative overflow-hidden">
+        {/* Background visual flair */}
+        <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-orange-500/10 to-transparent pointer-events-none"></div>
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-orange-500/20 blur-3xl rounded-full"></div>
+        
+        <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-3">
+          <Smartphone className="h-6 w-6 text-orange-400" />
+          Citizen Webhook Simulator (SOS)
+        </h3>
+        <p className="text-sm text-slate-400 mb-6 max-w-2xl">
+          Simulate incoming emergency payloads from the public. In production, these buttons represent endpoints that would be triggered automatically by Twilio WhatsApp bots or Telecom USSD gateways.
         </p>
-        <ul className="text-xs text-slate-400 mt-2 space-y-1 ml-4">
-          <li>• Use React Context to share disaster state across pages</li>
-          <li>• Store in localStorage for persistence across page refreshes</li>
-          <li>• Trigger real alerts and team deployments based on manual disasters</li>
-          <li>• Update the map markers to show demo disasters</li>
-        </ul>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+          
+          {/* WhatsApp Simulation */}
+          <div className="p-5 bg-slate-900/60 rounded-xl border border-slate-700/60 hover:border-green-500/30 transition-all group shadow-md">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
+                <MessageSquare className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">WhatsApp Emergency Bot</h4>
+                <p className="text-xs text-slate-400">Triggers via +91 98432 79397</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 h-12">
+              Injects a mock webhook payload representing a citizen sharing their live location via the WhatsApp Bot.
+            </p>
+            <button
+              onClick={() => {
+                const beacon = {
+                  senderName: 'Rajesh K. (WhatsApp)',
+                  contact: '+91 98432 79397',
+                  areaName: 'Velachery',
+                  lat: 12.971,
+                  lng: 80.218,
+                  type: 'Trapped in Building',
+                  message: 'Ground floor flooded, stuck on 2nd floor with elderly parents. Need rescue boat.',
+                  peopleCount: 3,
+                  severity: 'critical',
+                  source: 'WhatsApp',
+                };
+                addSOSBeacon(beacon);
+                sendSOSAlert(beacon);
+              }}
+              className="w-full px-4 py-3 bg-slate-800 hover:bg-green-600/20 text-green-400 hover:text-green-300 font-semibold rounded-lg border border-slate-700 hover:border-green-500/50 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Play className="h-4 w-4" />
+              Simulate WhatsApp Payload
+            </button>
+          </div>
+
+          {/* SMS / USSD Simulation */}
+          <div className="p-5 bg-slate-900/60 rounded-xl border border-slate-700/60 hover:border-blue-500/30 transition-all group shadow-md">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                <Smartphone className="h-6 w-6 text-blue-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">SMS / Cell-Tower Fallback</h4>
+                <p className="text-xs text-slate-400">Triggers via Telecom APIs</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 h-12">
+              Injects a mock payload representing an offline SMS triangulated by nearby cell towers during an internet blackout.
+            </p>
+            <button
+              onClick={() => {
+                const beacon = {
+                  senderName: 'Unknown Civilian (SMS)',
+                  contact: '+91 94441 12233',
+                  areaName: 'Pallikaranai Marsh',
+                  lat: 12.934,
+                  lng: 80.212,
+                  type: 'Medical Emergency',
+                  message: 'DIABETIC SHOCK. NO INSULIN. NO INTERNET.',
+                  peopleCount: 1,
+                  severity: 'high',
+                  source: 'SMS_Gateway',
+                };
+                addSOSBeacon(beacon);
+                sendSOSAlert(beacon);
+              }}
+              className="w-full px-4 py-3 bg-slate-800 hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 font-semibold rounded-lg border border-slate-700 hover:border-blue-500/50 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Play className="h-4 w-4" />
+              Simulate Triangulated SMS
+            </button>
+          </div>
+
+        </div>
+
       </div>
 
       {/* Route Modal */}
@@ -679,11 +793,11 @@ function DemoControls() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <Bed className="h-5 w-5 text-blue-400" />
-                        <span className="text-sm text-slate-400">Available Beds</span>
+                        <Hospital className="h-5 w-5 text-blue-400" />
+                        <span className="text-sm text-slate-400">Facility Status</span>
                       </div>
-                      <span className="text-lg font-bold text-white">
-                        {routeInfo.nearestHospital.freeBeds} / {routeInfo.nearestHospital.totalBeds}
+                      <span className="text-lg font-bold text-white capitalize">
+                        {routeInfo.nearestHospital.status || 'operational'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
@@ -742,7 +856,7 @@ function DemoControls() {
                             </div>
                           </div>
                           <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                            <span>🛏️ {hospital.freeBeds} beds</span>
+                            <span>🏥 {hospital.type || 'Emergency Trauma'}</span>
                             <span>🚑 {hospital.ambulances} ambulances</span>
                           </div>
                         </div>
@@ -756,8 +870,12 @@ function DemoControls() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    console.log('📞 Dispatching ambulance to:', routeInfo.nearestHospital.name);
-                    alert(`🚑 Ambulance dispatched from ${routeInfo.nearestHospital.name}\n\nETA: ${routeInfo.travelTime} minutes\nDistance: ${routeInfo.distance}`);
+                    dispatchAmbulance(
+                      routeInfo.nearestHospital.id,
+                      routeInfo.disaster.areaName,
+                      routeInfo.disaster.id
+                    );
+                    setShowRouteModal(false);
                   }}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
@@ -769,6 +887,72 @@ function DemoControls() {
                   className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Clear All Confirmation Modal ── */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl animate-fade-in"></div>
+          
+          <div className="relative glass-card p-0 bg-slate-900/95 shadow-[0_0_50px_-12px_rgba(225,29,72,0.3)] max-w-md w-full rounded-2xl border border-rose-900/40 overflow-hidden animate-slide-up">
+            
+            {/* Header pattern & gradient */}
+            <div className="relative h-28 bg-gradient-to-br from-rose-950 to-slate-950 flex items-center justify-center border-b border-rose-900/50">
+              <div className="absolute inset-0 cyber-grid opacity-20"></div>
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-600/20 blur-3xl rounded-full"></div>
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-red-600/20 blur-3xl rounded-full"></div>
+              
+              <div className="relative z-10 w-20 h-20 bg-slate-950 border-2 border-rose-500/50 rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(225,29,72,0.4)] mt-16">
+                <Trash2 className="w-9 h-9 text-rose-500 animate-pulse" />
+              </div>
+            </div>
+
+            <div className="p-8 pt-14 text-center relative z-10">
+              <h3 className="text-xl font-black text-white mb-2 tracking-wide uppercase">Wipe Operations System?</h3>
+              <p className="text-sm text-slate-400 mb-8 leading-relaxed">
+                This will permanently erase all active <span className="text-rose-400 font-bold">demo disasters</span> from the tactical grid. The dashboard and monitoring maps will be completely reset.
+              </p>
+              
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="flex-1 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all border border-slate-700 hover:border-slate-500 active:scale-95 shadow-sm"
+                >
+                  ABORT
+                </button>
+                <button
+                  onClick={() => {
+                    clearAllDisasters();
+                    setShowClearConfirm(false);
+                    
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-24 right-6 z-[100] animate-slide-up';
+                    notification.innerHTML = `
+                      <div class="glass-card p-4 border-l-4 border-l-rose-500 bg-rose-950/80 shadow-2xl shadow-rose-500/20 backdrop-blur-xl max-w-md rounded-xl border border-slate-700">
+                        <div class="flex items-start gap-3">
+                          <div class="text-2xl mt-1">🧹</div>
+                          <div>
+                            <h4 class="text-sm font-bold text-rose-400 mb-1 tracking-wide">SYSTEM CLEARED</h4>
+                            <p class="text-xs text-slate-300">All demo disasters have been wiped.</p>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                      notification.style.opacity = '0';
+                      notification.style.transition = 'opacity 0.5s ease';
+                      setTimeout(() => notification.remove(), 500);
+                    }, 3000);
+                  }}
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-600 text-white font-black uppercase tracking-wider rounded-xl shadow-[0_0_20px_rgba(225,29,72,0.3)] hover:shadow-[0_0_30px_rgba(225,29,72,0.5)] transition-all active:scale-95"
+                >
+                  CONFIRM WIPE
                 </button>
               </div>
             </div>
